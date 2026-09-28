@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'"
+    />
+    <title>Settings - Claude Usage Widget</title>
+    <link rel="stylesheet" href="common.css" />
+    <link rel="stylesheet" href="settings.css" />
+  </head>
+  <body>
+    <main class="settings">
+      <section class="section">
+        <h2>Accounts</h2>
+        <ul class="account-list" id="account-list"></ul>
+        <p class="hint" id="no-accounts">No accounts added yet.</p>
+        <div class="row">
+          <button type="button" class="button primary" id="add-login-button">Add account</button>
+        </div>
+        <details class="session-key">
+          <summary>Add with a session key instead</summary>
+          <p class="hint">
+            Use this if signing in inside the app does not work. Sign in to claude.ai in your browser, open the
+            developer tools (F12), go to Application &gt; Cookies &gt; https://claude.ai and copy the value of the
+            <code>sessionKey</code> cookie. The key gives full access to your claude.ai account, so never share it.
+          </p>
+          <div class="row">
+            <input
+              type="password"
+              class="text-input grow"
+              id="session-key-input"
+              placeholder="sk-ant-..."
+              autocomplete="off"
+              spellcheck="false"
+              aria-label="Session key"
+            />
+            <button type="button" class="button" id="session-key-button">Add</button>
+          </div>
+        </details>
+        <p class="message" id="account-message" role="status" hidden></p>
+      </section>
+
+      <section class="section">
+        <h2>Refresh</h2>
+        <label class="inline-field">
+          Refresh every
+          <input type="number" class="text-input number" id="refresh-interval" min="30" max="3600" step="10" />
+          seconds
+        </label>
+        <p class="hint">Allowed range: 30 to 3600 seconds. The widget also refreshes right after a limit resets.</p>
+      </section>
+
+      <section class="section">
+        <h2>Window</h2>
+        <label class="check"><input type="checkbox" id="always-on-top" /> Keep the widget above other windows</label>
+        <label class="check"><input type="checkbox" id="launch-at-startup" /> Start with Windows</label>
+      </section>
+
+      <section class="section">
+        <h2>Bar colors</h2>
+        <p class="hint">The bar reveals more of the gradient the more of a limit is used.</p>
+        <div class="colors">
+          <label class="color-field">
+            <input type="color" id="color-low" />
+            <span>Low (0%)</span>
+          </label>
+          <label class="color-field">
+            <input type="color" id="color-mid" />
+            <span>Middle (50%)</span>
+          </label>
+          <label class="color-field">
+            <input type="color" id="color-high" />
+            <span>High (100%)</span>
+          </label>
+        </div>
+        <div class="preview" id="color-preview"></div>
+        <div class="row">
+          <button type="button" class="button" id="reset-colors-button">Reset to defaults</button>
+        </div>
+      </section>
+    </main>
+    <script src="settings.js"></script>
+  </body>
+</html>

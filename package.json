@@ -1,0 +1,60 @@
+{
+  "name": "claude-usage-widget",
+  "productName": "Claude Usage Widget",
+  "version": "1.0.0",
+  "description": "Small desktop widget that shows the Claude.ai session and weekly usage limits for one or more accounts.",
+  "author": "NupsNils",
+  "license": "MIT",
+  "private": true,
+  "main": "dist/main/main.js",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start": "npm run build && electron .",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p src/renderer/tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "icon": "node scripts/generate-icon.mjs",
+    "dist": "npm run typecheck && npm test && npm run build && electron-builder --win portable --x64"
+  },
+  "build": {
+    "appId": "com.nupsnils.claude-usage-widget",
+    "productName": "Claude Usage Widget",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "package.json"
+    ],
+    "win": {
+      "icon": "build/icon.png",
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "portable": {
+      "artifactName": "ClaudeUsageWidget-${version}-portable.${ext}"
+    },
+    "electronFuses": {
+      "runAsNode": false,
+      "enableCookieEncryption": true,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "onlyLoadAppFromAsar": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "24.19.0",
+    "electron": "44.4.5",
+    "electron-builder": "26.15.3",
+    "esbuild": "0.28.2",
+    "typescript": "7.0.2",
+    "vitest": "5.0.2"
+  }
+}

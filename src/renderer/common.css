@@ -1,0 +1,140 @@
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --surface: #f4f4f5;
+  --border: #e4e4e7;
+  --text: #18181b;
+  --muted: #71717a;
+  --track: #e4e4e7;
+  --accent: #c2410c;
+  --accent-text: #ffffff;
+  --danger: #dc2626;
+  --warning: #b45309;
+  --focus: #2563eb;
+  --bar-gradient: linear-gradient(to right in oklab, #22c55e 0%, #facc15 50%, #ef4444 100%);
+  font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #18181b;
+    --surface: #232327;
+    --border: #2f2f35;
+    --text: #f4f4f5;
+    --muted: #a1a1aa;
+    --track: #33333a;
+    --accent: #ea7a4b;
+    --accent-text: #18181b;
+    --danger: #f87171;
+    --warning: #fbbf24;
+    --focus: #60a5fa;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+[hidden] {
+  display: none !important;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.button {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 6px;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+
+.button:hover:not(:disabled) {
+  border-color: var(--muted);
+}
+
+.button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+.button.primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.button.danger {
+  color: var(--danger);
+}
+
+.button:disabled,
+.link-button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.link-button {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--accent);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.link-button:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+/* Usage bar: the gradient spans the whole track, the clip reveals it up to --pct. */
+.bar {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--track);
+  overflow: hidden;
+}
+
+.bar-fill {
+  --pct: 0%;
+  position: absolute;
+  inset: 0;
+  background: var(--bar-gradient);
+  clip-path: inset(0 calc(100% - var(--pct)) 0 0 round 999px);
+  transition: clip-path 600ms ease;
+}
+
+/* Percentages are colored like the gradient; on a light background they need more contrast. */
+@media (prefers-color-scheme: light) {
+  .gradient-text {
+    filter: brightness(0.78) saturate(1.2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar-fill {
+    transition: none;
+  }
+}
