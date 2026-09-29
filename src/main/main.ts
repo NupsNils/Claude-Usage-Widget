@@ -13,6 +13,7 @@ import {
   type IpcMainInvokeEvent,
 } from 'electron';
 import { IpcChannels } from '../shared/ipc';
+import { MIN_WIDGET_HEIGHT } from '../shared/settings';
 import type { ActionResult, AppState, Settings } from '../shared/types';
 import { AccountStore } from './accountStore';
 import { createLoginRunner, focusLoginWindow } from './loginWindow';
@@ -23,6 +24,7 @@ import { trayTooltip } from './trayText';
 import { orphanedPartitionDirectories } from './urlPolicy';
 import { UsageService } from './usageService';
 import { chromeUserAgent } from './userAgent';
+import { userHeightAfterResize } from './windowPlacement';
 import { createSettingsWindow, createWidgetWindow, fitWidgetHeight } from './windows';
 
 const APP_USER_MODEL_ID = 'com.nupsnils.claude-usage-widget';
@@ -42,6 +44,10 @@ let settingsWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let quitting = false;
 let refreshTimer: NodeJS.Timeout | null = null;
+/** Last height the widget's content reported; null until the page has rendered. */
+let widgetContentHeight: number | null = null;
+/** Height of the widget when the user started dragging one of its edges; null while no drag is running. */
+let widgetHeightBeforeResize: number | null = null;
 
 let settingsStore: SettingsStore;
 let service: UsageService;
@@ -106,6 +112,60 @@ function openSettings(): void {
   });
 }
 
+function fitWidget(): void {
+  if (!widget || widget.isDestroyed() || widgetContentHeight === null) return;
+  fitWidgetHeight(widget, widgetContentHeight, settingsStore.get().widgetHeight);
+}
+
+function saveWidgetPosition(win: BrowserWindow): void {
+  const [x, y] = win.getPosition();
+  if (x !== undefined && y !== undefined) saveSettingsSafely(() => settingsStore.setWidgetPosition({ x, y }));
+}
+
+/** Remembers the size the user resized the widget to. */
+function onWidgetResized(win: BrowserWindow): void {
+  const [width, height] = win.getContentSize();
+  const [, fullHeight] = win.getMaximumSize();
+  if (width !== undefined && height !== undefined) {
+    const userHeight = userHeightAfterResize(
+      settingsStore.get().widgetHeight,
+      widgetHeightBeforeResize ?? height,
+      height,
+      fullHeight ?? height,
+    );
+    sendToWindows(IpcChannels.settingsChanged, saveSettingsSafely(() => settingsStore.setWidgetSize(width, userHeight)));
+  }
+  widgetHeightBeforeResize = null;
+  // Resizing from the left edge also moves the widget.
+  saveWidgetPosition(win);
+  fitWidget();
+}
+
+/**
+ * Windows can resize the widget without a drag on its edges, e.g. when it is snapped
+ * to a screen edge. Only such drags may change the width, so it is set back.
+ */
+function onWidgetResize(win: BrowserWindow): void {
+  if (widgetHeightBeforeResize !== null) return;
+  const [width, height] = win.getContentSize();
+  const { widgetWidth } = settingsStore.get();
+  // Rounding on scaled displays can change the width by a pixel; setting it again would not help.
+  if (width === undefined || height === undefined || Math.abs(width - widgetWidth) <= 2) return;
+  win.setContentSize(widgetWidth, height);
+  fitWidget();
+}
+
+function resetWidgetSize(): Settings {
+  const next = saveSettingsSafely(() => settingsStore.resetWidgetSize());
+  if (widget && !widget.isDestroyed()) {
+    const [, height] = widget.getContentSize();
+    widget.setContentSize(next.widgetWidth, height ?? MIN_WIDGET_HEIGHT);
+    fitWidget();
+  }
+  sendToWindows(IpcChannels.settingsChanged, next);
+  return next;
+}
+
 function createWidget(): void {
   const win = createWidgetWindow(settingsStore.get(), appIcon);
   widget = win;
@@ -117,10 +177,13 @@ function createWidget(): void {
       hideWidget();
     }
   });
-  win.on('moved', () => {
-    const [x, y] = win.getPosition();
-    if (x !== undefined && y !== undefined) saveSettingsSafely(() => settingsStore.setWidgetPosition({ x, y }));
+  win.on('moved', () => saveWidgetPosition(win));
+  // Both events are only emitted when the user drags an edge, not for setContentSize().
+  win.on('will-resize', () => {
+    widgetHeightBeforeResize ??= win.getContentSize()[1] ?? null;
   });
+  win.on('resized', () => onWidgetResized(win));
+  win.on('resize', () => onWidgetResize(win));
   win.on('show', updateTrayMenu);
   win.on('hide', updateTrayMenu);
 }
@@ -285,12 +348,19 @@ function registerIpc(): void {
     await service.remove(accountId);
     scheduleRefresh();
   });
+  handle(IpcChannels.setAccountCollapsed, (accountId, collapsed) => {
+    if (typeof accountId !== 'string' || typeof collapsed !== 'boolean') return;
+    if (service.getState().accounts.some((account) => account.id === accountId)) service.setCollapsed(accountId, collapsed);
+  });
+  handle(IpcChannels.resetWidgetSize, () => resetWidgetSize());
 
   on(IpcChannels.openSettings, () => openSettings());
   on(IpcChannels.hideWidget, () => hideWidget());
   on(IpcChannels.setWidgetHeight, (event, height) => {
     if (widget && !widget.isDestroyed() && event.sender === widget.webContents && typeof height === 'number') {
-      fitWidgetHeight(widget, height);
+      widgetContentHeight = height;
+      // Changing the size while the user drags an edge would fight the drag.
+      if (widgetHeightBeforeResize === null) fitWidget();
     }
   });
 }

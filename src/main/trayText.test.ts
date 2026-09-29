@@ -11,6 +11,7 @@ function account(overrides: Partial<AccountView>): AccountView {
     email: 'alice@example.com',
     customLabel: null,
     organizationName: null,
+    collapsed: false,
     status: 'ok',
     errorMessage: null,
     usage: {

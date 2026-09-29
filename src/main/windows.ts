@@ -1,11 +1,10 @@
 import path from 'node:path';
 import { BrowserWindow, nativeTheme, screen, type NativeImage, type WebContents } from 'electron';
+import { MAX_WIDGET_WIDTH, MIN_WIDGET_HEIGHT, MIN_WIDGET_WIDTH } from '../shared/settings';
 import type { Settings } from '../shared/types';
-import { clampRectToArea, resolveWidgetPosition } from './windowPlacement';
+import { clampRectToArea, resolveWidgetPosition, widgetHeight } from './windowPlacement';
 
-export const WIDGET_WIDTH = 340;
 const WIDGET_INITIAL_HEIGHT = 180;
-const WIDGET_MIN_HEIGHT = 80;
 
 const PRELOAD_PATH = path.join(__dirname, '../preload/preload.js');
 const RENDERER_DIR = path.join(__dirname, '../renderer');
@@ -29,7 +28,7 @@ const secureWebPreferences = {
 };
 
 export function createWidgetWindow(settings: Settings, icon: NativeImage): BrowserWindow {
-  const size = { width: WIDGET_WIDTH, height: WIDGET_INITIAL_HEIGHT };
+  const size = { width: settings.widgetWidth, height: WIDGET_INITIAL_HEIGHT };
   const position = resolveWidgetPosition(
     settings.widgetPosition,
     size,
@@ -40,8 +39,11 @@ export function createWidgetWindow(settings: Settings, icon: NativeImage): Brows
     ...position,
     ...size,
     useContentSize: true,
+    minWidth: MIN_WIDGET_WIDTH,
+    maxWidth: MAX_WIDGET_WIDTH,
+    minHeight: MIN_WIDGET_HEIGHT,
     frame: false,
-    resizable: false,
+    resizable: true,
     maximizable: false,
     minimizable: false,
     fullscreenable: false,
@@ -58,16 +60,18 @@ export function createWidgetWindow(settings: Settings, icon: NativeImage): Brows
   return win;
 }
 
-/** Sets the widget height to its content and keeps it on screen. */
-export function fitWidgetHeight(win: BrowserWindow, contentHeight: number): void {
+/**
+ * Sets the widget height to its content, at most `userHeight` (the height the user
+ * resized it to), and keeps it on screen. The user can resize the widget to be
+ * shorter than its content (the account list then scrolls), but not taller.
+ */
+export function fitWidgetHeight(win: BrowserWindow, contentHeight: number, userHeight: number | null): void {
   if (!Number.isFinite(contentHeight)) return;
-  const bounds = win.getBounds();
-  const workArea = screen.getDisplayMatching(bounds).workArea;
-  const height = Math.round(Math.min(Math.max(contentHeight, WIDGET_MIN_HEIGHT), workArea.height));
-  const [currentWidth, currentHeight] = win.getContentSize();
-  if (currentWidth !== WIDGET_WIDTH || currentHeight !== height) {
-    win.setContentSize(WIDGET_WIDTH, height);
-  }
+  const workArea = screen.getDisplayMatching(win.getBounds()).workArea;
+  win.setMaximumSize(MAX_WIDGET_WIDTH, widgetHeight(contentHeight, null, workArea.height));
+  const height = widgetHeight(contentHeight, userHeight, workArea.height);
+  const [currentWidth = MIN_WIDGET_WIDTH, currentHeight] = win.getContentSize();
+  if (currentHeight !== height) win.setContentSize(currentWidth, height);
   const resized = win.getBounds();
   const clamped = clampRectToArea(resized, workArea);
   if (clamped.x !== resized.x || clamped.y !== resized.y) win.setPosition(clamped.x, clamped.y);

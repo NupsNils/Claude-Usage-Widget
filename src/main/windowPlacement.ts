@@ -1,3 +1,4 @@
+import { MIN_WIDGET_HEIGHT } from '../shared/settings';
 import type { WindowPosition } from '../shared/types';
 
 export interface Rect {
@@ -16,6 +17,8 @@ export interface Size {
 const MIN_VISIBLE_WIDTH = 80;
 const MIN_VISIBLE_HEIGHT = 40;
 const DEFAULT_MARGIN = 16;
+/** Sizes can be off by a pixel after rounding on scaled displays. */
+const FULL_HEIGHT_TOLERANCE = 2;
 
 function visibleArea(rect: Rect, area: Rect): Size {
   const width = Math.min(rect.x + rect.width, area.x + area.width) - Math.max(rect.x, area.x);
@@ -48,6 +51,31 @@ export function resolveWidgetPosition(
     x: primaryWorkArea.x + primaryWorkArea.width - size.width - DEFAULT_MARGIN,
     y: primaryWorkArea.y + DEFAULT_MARGIN,
   };
+}
+
+/**
+ * Height of the widget window: the height of its content, but at most the height
+ * the user resized it to (null: no limit) and never taller than the screen.
+ */
+export function widgetHeight(contentHeight: number, userHeight: number | null, screenHeight: number): number {
+  const wanted = Math.max(Math.min(contentHeight, userHeight ?? Number.POSITIVE_INFINITY), MIN_WIDGET_HEIGHT);
+  return Math.round(Math.min(wanted, screenHeight));
+}
+
+/**
+ * The height to remember after the user resized the widget from `before` to `after`
+ * px. A resize that kept the height (e.g. only the width changed) keeps the
+ * `previous` choice. Resizing to the full height (`fullHeight`, it cannot grow past
+ * its content) returns null, so the widget fits its content again.
+ */
+export function userHeightAfterResize(
+  previous: number | null,
+  before: number,
+  after: number,
+  fullHeight: number,
+): number | null {
+  if (after === before) return previous;
+  return after >= fullHeight - FULL_HEIGHT_TOLERANCE ? null : Math.round(after);
 }
 
 /** Moves `rect` so that it lies inside `area` (as far as it fits). */

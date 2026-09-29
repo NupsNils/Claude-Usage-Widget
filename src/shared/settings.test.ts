@@ -2,11 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_COLORS } from './gradient';
 import {
   DEFAULT_SETTINGS,
+  DEFAULT_WIDGET_WIDTH,
   MAX_REFRESH_INTERVAL_SECONDS,
+  MAX_WIDGET_WIDTH,
   MIN_REFRESH_INTERVAL_SECONDS,
+  MIN_WIDGET_HEIGHT,
+  MIN_WIDGET_WIDTH,
   applySettingsPatch,
   normalizeRefreshInterval,
   normalizeSettings,
+  normalizeWidgetHeight,
+  normalizeWidgetWidth,
 } from './settings';
 
 describe('normalizeSettings', () => {
@@ -23,6 +29,8 @@ describe('normalizeSettings', () => {
       launchAtStartup: true,
       colors: { low: '#00FF00', mid: '#ff0', high: '#aa0000' },
       widgetPosition: { x: 100.4, y: -20 },
+      widgetWidth: 420.6,
+      widgetHeight: 300,
     };
     expect(normalizeSettings(stored)).toEqual({
       refreshIntervalSeconds: 120,
@@ -30,6 +38,8 @@ describe('normalizeSettings', () => {
       launchAtStartup: true,
       colors: { low: '#00ff00', mid: '#ffff00', high: '#aa0000' },
       widgetPosition: { x: 100, y: -20 },
+      widgetWidth: 421,
+      widgetHeight: 300,
     });
   });
 
@@ -39,11 +49,15 @@ describe('normalizeSettings', () => {
       alwaysOnTop: 'yes',
       colors: { low: 'green', mid: '#123456' },
       widgetPosition: { x: 'left', y: 3 },
+      widgetWidth: 'wide',
+      widgetHeight: Number.NaN,
     });
     expect(result.refreshIntervalSeconds).toBe(DEFAULT_SETTINGS.refreshIntervalSeconds);
     expect(result.alwaysOnTop).toBe(DEFAULT_SETTINGS.alwaysOnTop);
     expect(result.colors).toEqual({ low: DEFAULT_COLORS.low, mid: '#123456', high: DEFAULT_COLORS.high });
     expect(result.widgetPosition).toBeNull();
+    expect(result.widgetWidth).toBe(DEFAULT_WIDGET_WIDTH);
+    expect(result.widgetHeight).toBeNull();
   });
 
   it('does not share the default colors object', () => {
@@ -72,6 +86,23 @@ describe('normalizeRefreshInterval', () => {
   });
 });
 
+describe('widget size', () => {
+  it('clamps the width and rounds it', () => {
+    expect(normalizeWidgetWidth(10)).toBe(MIN_WIDGET_WIDTH);
+    expect(normalizeWidgetWidth(5000)).toBe(MAX_WIDGET_WIDTH);
+    expect(normalizeWidgetWidth(333.4)).toBe(333);
+    expect(normalizeWidgetWidth(null)).toBe(DEFAULT_WIDGET_WIDTH);
+    expect(normalizeWidgetWidth(Number.POSITIVE_INFINITY)).toBe(DEFAULT_WIDGET_WIDTH);
+  });
+
+  it('clamps the height and treats anything else as "fit the content"', () => {
+    expect(normalizeWidgetHeight(1)).toBe(MIN_WIDGET_HEIGHT);
+    expect(normalizeWidgetHeight(250.5)).toBe(251);
+    expect(normalizeWidgetHeight(null)).toBeNull();
+    expect(normalizeWidgetHeight('200')).toBeNull();
+  });
+});
+
 describe('applySettingsPatch', () => {
   const current = normalizeSettings({ widgetPosition: { x: 10, y: 20 } });
 
@@ -94,9 +125,11 @@ describe('applySettingsPatch', () => {
     expect(next).toEqual(current);
   });
 
-  it('does not let the patch move the widget', () => {
-    const next = applySettingsPatch(current, { widgetPosition: { x: 0, y: 0 } });
+  it('does not let the patch move or resize the widget', () => {
+    const next = applySettingsPatch(current, { widgetPosition: { x: 0, y: 0 }, widgetWidth: 500, widgetHeight: 100 });
     expect(next.widgetPosition).toEqual({ x: 10, y: 20 });
+    expect(next.widgetWidth).toBe(DEFAULT_WIDGET_WIDTH);
+    expect(next.widgetHeight).toBeNull();
   });
 
   it('ignores non-object patches', () => {

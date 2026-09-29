@@ -16,6 +16,10 @@ export interface Settings {
   launchAtStartup: boolean;
   colors: GradientColors;
   widgetPosition: WindowPosition | null;
+  /** Width of the widget in px, as last resized by the user. */
+  widgetWidth: number;
+  /** Height the user resized the widget to, or null to fit the content. The widget never grows past its content. */
+  widgetHeight: number | null;
 }
 
 /** The subset of settings the settings window is allowed to change. */
@@ -50,6 +54,8 @@ export interface AccountView {
   email: string;
   customLabel: string | null;
   organizationName: string | null;
+  /** The widget shows only a one-line summary of this account. */
+  collapsed: boolean;
   status: AccountStatus;
   errorMessage: string | null;
   /** Last successfully fetched usage. Kept while a later refresh fails. */

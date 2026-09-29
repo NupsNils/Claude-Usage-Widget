@@ -23,9 +23,12 @@ const api: WidgetApi = {
   reloginAccount: (accountId) => ipcRenderer.invoke(IpcChannels.reloginAccount, accountId),
   renameAccount: (accountId, label) => ipcRenderer.invoke(IpcChannels.renameAccount, accountId, label),
   removeAccount: (accountId) => ipcRenderer.invoke(IpcChannels.removeAccount, accountId),
+  setAccountCollapsed: (accountId, collapsed) =>
+    ipcRenderer.invoke(IpcChannels.setAccountCollapsed, accountId, collapsed),
   openSettings: () => ipcRenderer.send(IpcChannels.openSettings),
   hideWidget: () => ipcRenderer.send(IpcChannels.hideWidget),
   setWidgetHeight: (height) => ipcRenderer.send(IpcChannels.setWidgetHeight, height),
+  resetWidgetSize: () => ipcRenderer.invoke(IpcChannels.resetWidgetSize),
 };
 
 contextBridge.exposeInMainWorld('widgetApi', api);

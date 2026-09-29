@@ -355,6 +355,17 @@ describe('UsageService rename and remove', () => {
     expect(states.at(-1)?.accounts[0]?.label).toBe('alice@example.com');
   });
 
+  it('collapses and expands an account', async () => {
+    sessions.nextRoutes = identityRoutes('alice@example.com', 'a');
+    const service = createService();
+    await service.addWithSessionKey(sessionKey);
+    expect(service.getState().accounts[0]?.collapsed).toBe(false);
+    service.setCollapsed('id-1', true);
+    expect(states.at(-1)?.accounts[0]?.collapsed).toBe(true);
+    service.setCollapsed('id-1', false);
+    expect(states.at(-1)?.accounts[0]?.collapsed).toBe(false);
+  });
+
   it('removes an account together with its session', async () => {
     sessions.nextRoutes = identityRoutes('alice@example.com', 'a');
     const service = createService();

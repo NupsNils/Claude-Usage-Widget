@@ -74,6 +74,7 @@ describe('AccountStore', () => {
       organizationId: 'org-1',
       organizationName: 'Alice personal',
       customLabel: null,
+      collapsed: false,
       addedAt: 1_700_000_000_000,
     });
     expect(JSON.parse(fs.readFileSync(filePath, 'utf8')).version).toBe(2);
@@ -115,6 +116,19 @@ describe('AccountStore', () => {
     expect(store.setCustomLabel('id-1', '   ').customLabel).toBeNull();
   });
 
+  it('collapses accounts and keeps that after signing in again', () => {
+    const store = createStore();
+    store.load();
+    store.add(alice, partitionA);
+    expect(store.setCollapsed('id-1', true).collapsed).toBe(true);
+    expect(store.updateSession('id-1', alice, partitionB).collapsed).toBe(true);
+    const reloaded = createStore();
+    reloaded.load();
+    expect(reloaded.get('id-1')?.collapsed).toBe(true);
+    expect(store.setCollapsed('id-1', false).collapsed).toBe(false);
+    expect(() => store.setCollapsed('missing', true)).toThrow(/Unknown account/);
+  });
+
   it('removes accounts and returns the removed entry', () => {
     const store = createStore();
     store.load();
@@ -151,7 +165,7 @@ describe('AccountStore', () => {
 
   it('skips invalid and duplicate entries when loading', () => {
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
-    const valid = { id: 'a', partition: partitionA, email: 'a@example.com', organizationId: 'org', addedAt: 5 };
+    const valid = { id: 'a', partition: partitionA, email: 'a@example.com', organizationId: 'org', addedAt: 5, collapsed: 'yes' };
     fs.writeFileSync(
       filePath,
       JSON.stringify({
@@ -178,6 +192,7 @@ describe('AccountStore', () => {
         organizationId: 'org',
         organizationName: null,
         customLabel: null,
+        collapsed: false,
         addedAt: 5,
       },
     ]);

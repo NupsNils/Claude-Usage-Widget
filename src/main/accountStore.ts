@@ -20,6 +20,8 @@ export interface StoredAccount extends AccountIdentity {
   id: string;
   partition: string;
   customLabel: string | null;
+  /** The widget shows only a one-line summary of this account. */
+  collapsed: boolean;
   addedAt: number;
 }
 
@@ -62,6 +64,7 @@ function parseStoredAccount(value: unknown): StoredAccount | null {
     organizationId: raw.organizationId,
     organizationName: isNonEmptyString(raw.organizationName) ? raw.organizationName : null,
     customLabel: isNonEmptyString(raw.customLabel) ? raw.customLabel : null,
+    collapsed: raw.collapsed === true,
     addedAt: typeof raw.addedAt === 'number' && Number.isFinite(raw.addedAt) ? raw.addedAt : 0,
   };
 }
@@ -153,6 +156,7 @@ export class AccountStore {
       organizationId: identity.organizationId,
       organizationName: identity.organizationName,
       customLabel: null,
+      collapsed: false,
       addedAt: this.now(),
     };
     this.commit([...this.accounts, account]);
@@ -187,6 +191,10 @@ export class AccountStore {
 
   setCustomLabel(id: string, label: string | null): StoredAccount {
     return this.replace({ ...this.require(id), customLabel: normalizeLabel(label) });
+  }
+
+  setCollapsed(id: string, collapsed: boolean): StoredAccount {
+    return this.replace({ ...this.require(id), collapsed });
   }
 
   remove(id: string): StoredAccount | undefined {

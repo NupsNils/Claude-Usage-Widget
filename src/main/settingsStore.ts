@@ -1,5 +1,11 @@
 import { DEFAULT_COLORS } from '../shared/gradient';
-import { applySettingsPatch, normalizeSettings } from '../shared/settings';
+import {
+  DEFAULT_SETTINGS,
+  applySettingsPatch,
+  normalizeSettings,
+  normalizeWidgetHeight,
+  normalizeWidgetWidth,
+} from '../shared/settings';
 import type { Settings, WindowPosition } from '../shared/types';
 import { readJsonFile, writeJsonFileAtomic } from './jsonFile';
 
@@ -38,6 +44,15 @@ export class SettingsStore {
 
   setWidgetPosition(position: WindowPosition): Settings {
     return this.commit({ ...this.settings, widgetPosition: normalizeSettings({ widgetPosition: position }).widgetPosition });
+  }
+
+  /** Stores the size the user resized the widget to; a null height means "fit the content". */
+  setWidgetSize(width: number, height: number | null): Settings {
+    return this.commit({ ...this.settings, widgetWidth: normalizeWidgetWidth(width), widgetHeight: normalizeWidgetHeight(height) });
+  }
+
+  resetWidgetSize(): Settings {
+    return this.commit({ ...this.settings, widgetWidth: DEFAULT_SETTINGS.widgetWidth, widgetHeight: DEFAULT_SETTINGS.widgetHeight });
   }
 
   private commit(next: Settings): Settings {

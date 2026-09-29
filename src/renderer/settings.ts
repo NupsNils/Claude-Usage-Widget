@@ -1,5 +1,6 @@
 import { formatPercent } from '../shared/format';
 import { gradientCss, sampleGradient } from '../shared/gradient';
+import { DEFAULT_SETTINGS } from '../shared/settings';
 import type { AccountStatus, AccountView, ActionResult, AppState, GradientColors, Settings } from '../shared/types';
 import { byId, el } from './dom';
 
@@ -153,6 +154,7 @@ sessionKeyInput.addEventListener('keydown', (event) => {
 const refreshInterval = byId<HTMLInputElement>('refresh-interval');
 const alwaysOnTop = byId<HTMLInputElement>('always-on-top');
 const launchAtStartup = byId<HTMLInputElement>('launch-at-startup');
+const resetSizeButton = byId<HTMLButtonElement>('reset-size-button');
 const colorInputs: Record<keyof GradientColors, HTMLInputElement> = {
   low: byId<HTMLInputElement>('color-low'),
   mid: byId<HTMLInputElement>('color-mid'),
@@ -179,6 +181,8 @@ function renderSettings(settings: Settings): void {
   if (document.activeElement !== refreshInterval) refreshInterval.value = String(settings.refreshIntervalSeconds);
   alwaysOnTop.checked = settings.alwaysOnTop;
   launchAtStartup.checked = settings.launchAtStartup;
+  resetSizeButton.disabled =
+    settings.widgetWidth === DEFAULT_SETTINGS.widgetWidth && settings.widgetHeight === DEFAULT_SETTINGS.widgetHeight;
   // While a color picker is open, the echo of an earlier save must not reset it.
   const pickingColor = Object.values(colorInputs).some((input) => document.activeElement === input);
   if (pickingColor) return;
@@ -195,6 +199,7 @@ refreshInterval.addEventListener('change', () => {
 });
 alwaysOnTop.addEventListener('change', () => void api.updateSettings({ alwaysOnTop: alwaysOnTop.checked }));
 launchAtStartup.addEventListener('change', () => void api.updateSettings({ launchAtStartup: launchAtStartup.checked }));
+resetSizeButton.addEventListener('click', () => void api.resetWidgetSize());
 
 let colorTimer: ReturnType<typeof setTimeout> | undefined;
 for (const key of Object.keys(colorInputs) as Array<keyof GradientColors>) {

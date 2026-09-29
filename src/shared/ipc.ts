@@ -13,9 +13,11 @@ export const IpcChannels = {
   reloginAccount: 'accounts:relogin',
   renameAccount: 'accounts:rename',
   removeAccount: 'accounts:remove',
+  setAccountCollapsed: 'accounts:set-collapsed',
   openSettings: 'window:open-settings',
   hideWidget: 'window:hide-widget',
   setWidgetHeight: 'window:set-widget-height',
+  resetWidgetSize: 'window:reset-widget-size',
 } as const;
 
 /** The API the preload script exposes to the renderer as `window.widgetApi`. */
@@ -32,7 +34,9 @@ export interface WidgetApi {
   reloginAccount(accountId: string): Promise<ActionResult>;
   renameAccount(accountId: string, label: string): Promise<void>;
   removeAccount(accountId: string): Promise<void>;
+  setAccountCollapsed(accountId: string, collapsed: boolean): Promise<void>;
   openSettings(): void;
   hideWidget(): void;
   setWidgetHeight(height: number): void;
+  resetWidgetSize(): Promise<Settings>;
 }

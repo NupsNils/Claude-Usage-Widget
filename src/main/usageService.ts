@@ -102,6 +102,7 @@ export class UsageService {
         email: account.email,
         customLabel: account.customLabel,
         organizationName: account.organizationName,
+        collapsed: account.collapsed,
         status: runtime.status,
         errorMessage: runtime.errorMessage,
         usage: runtime.usage,
@@ -183,6 +184,11 @@ export class UsageService {
 
   rename(id: string, label: string): void {
     this.store.setCustomLabel(id, label);
+    this.emit();
+  }
+
+  setCollapsed(id: string, collapsed: boolean): void {
+    this.store.setCollapsed(id, collapsed);
     this.emit();
   }
 

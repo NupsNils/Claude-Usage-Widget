@@ -5,7 +5,7 @@ account it shows the current 5-hour session limit and the weekly limit as a bar,
 used, and when the limit resets.
 
 <p align="center">
-  <img src="docs/widget.png" alt="The widget with three accounts" width="340" />
+  <img src="docs/widget.png" alt="The widget with four accounts, two of them collapsed" width="340" />
 </p>
 
 ## Features
@@ -16,8 +16,9 @@ used, and when the limit resets.
   "Not started".
 - The bar gradient runs from green through yellow to red across the full width, so the more of a limit
   is used, the further the bar reaches into the red. The three colors can be changed in the settings.
-- Compact, frameless window that can be kept above other windows, remembers its position and lives in
-  the system tray.
+- Accounts can be collapsed to a single line that still shows the session and weekly percentage.
+- Compact, frameless window that can be kept above other windows, resized by dragging its edges,
+  remembers its position and size and lives in the system tray.
 - Signing in happens on claude.ai's own login page inside the app. Signing in with a copied session key
   is available as a fallback.
 - Refreshes automatically (every 60 seconds by default, and right after a limit resets), after waking
@@ -27,9 +28,10 @@ used, and when the limit resets.
 
 ## Download and run
 
-Build the portable executable yourself (see below) and start `ClaudeUsageWidget-<version>-portable.exe`.
-The portable build does not need to be installed; it unpacks itself on every start, so the first
-window can take a few seconds to appear.
+Download `ClaudeUsageWidget-<version>-portable.exe` from the
+[latest release](https://github.com/NupsNils/Claude-Usage-Widget/releases/latest) and start it, or build it
+yourself (see below). The portable build does not need to be installed; it unpacks itself on every start,
+so the first window can take a few seconds to appear.
 
 The executable is not code-signed, so Windows SmartScreen may show a warning on the first start
 ("More info" > "Run anyway").
@@ -52,6 +54,15 @@ use **Add with a session key instead** in the settings: sign in to claude.ai in 
 developer tools (F12), go to Application > Cookies > `https://claude.ai` and copy the value of the
 `sessionKey` cookie. Treat this key like a password.
 
+### The widget
+
+- Click an account's name to collapse it to one line with the session (5h) and weekly (7d) percentage;
+  click it again to expand it. Errors such as "Signed out" stay visible while an account is collapsed.
+- Drag the left, right or bottom edge to change the size. The widget grows and shrinks with its content.
+  If you make it shorter than the content, the account list scrolls and the widget does not grow past
+  that height any more; dragging it back to its full height (or **Reset widget size** in the settings)
+  lets it follow the content again.
+
 ### Settings
 
 Open the settings with the slider icon in the widget or from the tray menu.
@@ -63,7 +74,8 @@ Open the settings with the slider icon in the widget or from the tray menu.
 - **Accounts**: rename an account (an empty name shows the email address), sign in again when a
   session has expired, or remove an account.
 - **Refresh**: refresh interval between 30 and 3600 seconds.
-- **Window**: keep the widget above other windows, start with Windows.
+- **Window**: keep the widget above other windows, start with Windows, reset the widget to its default
+  size.
 - **Bar colors**: the colors at 0 %, 50 % and 100 %, with a live preview. "Reset to defaults" restores
   green, yellow and red.
 
@@ -95,8 +107,9 @@ enterprise plans).
   sign-in window shows claude.ai's own login page, which loads its own resources (for example the
   Google and Apple sign-in pages and Cloudflare's bot protection).
 - Everything is stored locally in `%APPDATA%\Claude Usage Widget`:
-  - `settings.json`: settings and the widget position.
-  - `accounts.json`: email address, organization and display name per account. It contains no secrets.
+  - `settings.json`: settings and the widget position and size.
+  - `accounts.json`: email address, organization, display name and collapsed state per account. It
+    contains no secrets.
   - `Partitions\acct-*`: one browser storage per account with the claude.ai cookies, including the
     session. In the packaged app, cookies are encrypted with Windows DPAPI (Electron's cookie encryption
     is switched on at build time), which ties them to your Windows user account.

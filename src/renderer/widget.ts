@@ -1,28 +1,80 @@
-import { formatClockTime } from '../shared/format';
-import { DEFAULT_COLORS, gradientCss } from '../shared/gradient';
-import type { AccountView, AppState, GradientColors } from '../shared/types';
+import { describeLimit, formatClockTime } from '../shared/format';
+import { DEFAULT_COLORS, gradientCss, sampleGradient } from '../shared/gradient';
+import type { AccountView, AppState, GradientColors, UsageLimit } from '../shared/types';
 import { byId, el } from './dom';
 import { UsageBar } from './usageBar';
 
 const api = window.widgetApi;
 const TICK_MS = 15_000;
 
+/** Short name and percentage of one limit, shown in the header of a collapsed account. */
+class LimitSummary {
+  readonly element: HTMLElement;
+  private readonly percent: HTMLElement;
+
+  constructor(name: string, title: string) {
+    this.element = el('span', 'summary-item');
+    this.element.title = title;
+    const shortName = el('span', 'summary-name', name);
+    shortName.setAttribute('aria-hidden', 'true');
+    this.percent = el('span', 'summary-percent gradient-text');
+    // Screen readers announce the full name instead of "5h" or "7d".
+    this.element.append(shortName, el('span', 'visually-hidden', `${title} `), this.percent);
+  }
+
+  update(limit: UsageLimit | null, colors: GradientColors, now: number): void {
+    const display = describeLimit(limit, now);
+    this.percent.textContent = display.percentText;
+    this.percent.style.color = limit === null ? '' : sampleGradient(colors, display.percent);
+  }
+}
+
 class AccountCard {
   readonly element: HTMLElement;
+  private readonly toggle: HTMLButtonElement;
   private readonly label: HTMLElement;
+  private readonly summary: HTMLElement;
+  private readonly sessionSummary = new LimitSummary('5h', 'Current session');
+  private readonly weeklySummary = new LimitSummary('7d', 'Weekly limit');
   private readonly badge: HTMLElement;
   private readonly message: HTMLElement;
   private readonly messageText: HTMLElement;
   private readonly loginButton: HTMLButtonElement;
+  private readonly limits: HTMLElement;
   private readonly session = new UsageBar('Current session');
   private readonly weekly = new UsageBar('Weekly limit');
   private accountId: string;
+  private collapsed = false;
+  /** The state the user just chose; it wins over the state from the main process until saving has finished. */
+  private pendingCollapsed: boolean | null = null;
 
   constructor(view: AccountView) {
     this.accountId = view.id;
     this.element = el('section', 'account');
-    const header = el('div', 'account-header');
-    header.append((this.label = el('span', 'account-label')), (this.badge = el('span', 'account-badge')));
+    // The whole header is the button that collapses and expands the account.
+    this.toggle = el('button', 'account-header');
+    this.toggle.type = 'button';
+    this.summary = el('span', 'account-summary');
+    this.summary.append(this.sessionSummary.element, this.weeklySummary.element);
+    this.toggle.append(
+      el('span', 'account-chevron'),
+      (this.label = el('span', 'account-label')),
+      this.summary,
+      (this.badge = el('span', 'account-badge')),
+    );
+    this.toggle.addEventListener('click', () => {
+      const collapsed = !this.collapsed;
+      this.pendingCollapsed = collapsed;
+      this.setCollapsed(collapsed);
+      void api
+        .setAccountCollapsed(this.accountId, collapsed)
+        .catch((error: unknown) => console.error('Could not save the collapsed state:', error))
+        .finally(() => {
+          if (this.pendingCollapsed === collapsed) this.pendingCollapsed = null;
+          // Shows the saved state again, also when saving failed.
+          render();
+        });
+    });
     this.message = el('div', 'account-message');
     this.messageText = el('span', 'account-message-text');
     this.loginButton = el('button', 'link-button', 'Log in again');
@@ -34,11 +86,25 @@ class AccountCard {
       });
     });
     this.message.append(this.messageText, this.loginButton);
-    this.element.append(header, this.message, this.session.element, this.weekly.element);
+    this.limits = el('div', 'account-limits');
+    this.limits.id = `limits-${view.id}`;
+    this.limits.append(this.session.element, this.weekly.element);
+    this.toggle.setAttribute('aria-controls', this.limits.id);
+    // Errors stay visible when the account is collapsed.
+    this.element.append(this.toggle, this.message, this.limits);
+  }
+
+  private setCollapsed(collapsed: boolean): void {
+    this.collapsed = collapsed;
+    this.element.classList.toggle('collapsed', collapsed);
+    this.toggle.setAttribute('aria-expanded', String(!collapsed));
+    this.summary.hidden = !collapsed;
+    this.limits.hidden = collapsed;
   }
 
   update(view: AccountView, colors: GradientColors, now: number): void {
     this.accountId = view.id;
+    this.setCollapsed(this.pendingCollapsed ?? view.collapsed);
     this.label.textContent = view.label;
     this.label.title = view.organizationName ? `${view.email} (${view.organizationName})` : view.email;
 
@@ -55,6 +121,8 @@ class AccountCard {
     const placeholder = view.status === 'loading' ? 'Loading...' : undefined;
     this.session.update(view.usage?.session ?? null, colors, now, placeholder);
     this.weekly.update(view.usage?.weekly ?? null, colors, now, placeholder);
+    this.sessionSummary.update(view.usage?.session ?? null, colors, now);
+    this.weeklySummary.update(view.usage?.weekly ?? null, colors, now);
   }
 }
 
